@@ -3,8 +3,8 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 import os
 
-BOT_TOKEN =8173355562:AAFKrtX9LaprMCmrgUnRyhnV7NW_LZIbKh8
-WEBAPP_URL =https://your-webapp-url.onrender.com
+BOT_TOKEN ="8173355562:AAFKrtX9LaprMCmrgUnRyhnV7NW_LZIbKh8"
+WEBAPP_URL ="https://youtubeshorts-1res.onrender.com"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
